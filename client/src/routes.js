@@ -34,6 +34,7 @@ import { TbFileInvoice } from "react-icons/tb";
 // Admin Imports
 const MainDashboard = React.lazy(() => import("views/admin/default"));
 const Owners = React.lazy(() => import("views/admin/owners"));
+const RentalUnits = React.lazy(() => import("views/admin/rentalUnits"));
 
 // My component
 const Contact = React.lazy(() => import("views/admin/contact"));
@@ -154,6 +155,13 @@ const routes = [
     path: "/owners",
     icon: <Icon as={HiUsers} width="20px" height="20px" color="inherit" />,
     component: Owners,
+  },
+  {
+    name: "Rental Units",
+    layout: [ROLE_PATH.superAdmin, ROLE_PATH.user],
+    path: "/rental-units",
+    icon: <Icon as={LuBuilding2} width="20px" height="20px" color="inherit" />,
+    component: RentalUnits,
   },
   // ========================== Admin Layout ==========================
   // ------------- lead Routes ------------------------
