@@ -938,6 +938,10 @@ const Reservations = () => {
           access={access}
           onOpen={openAdd}
           addBtn={false}
+          emptyTitle="No reservations yet"
+          emptyMessage="Create the first booking to track guests, stay dates, deposits, and balances."
+          emptyActionLabel="Add Reservation"
+          onEmptyAction={openAdd}
           setDelete={setDeleteModel}
           selectedValues={selectedValues}
           setSelectedValues={setSelectedValues}

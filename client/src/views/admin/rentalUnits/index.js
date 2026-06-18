@@ -758,6 +758,10 @@ const RentalUnits = () => {
           access={access}
           onOpen={openAdd}
           addBtn={false}
+          emptyTitle="No rental units yet"
+          emptyMessage="Add rentable inventory before creating reservations and tracking availability."
+          emptyActionLabel="Add Rental Unit"
+          onEmptyAction={openAdd}
           setDelete={setDeleteModel}
           selectedValues={selectedValues}
           setSelectedValues={setSelectedValues}

@@ -743,6 +743,10 @@ const Owners = () => {
           access={access}
           onOpen={openAdd}
           addBtn={false}
+          emptyTitle="No owners yet"
+          emptyMessage="Add owners to manage contact details, payout preferences, and commission rules."
+          emptyActionLabel="Add Owner"
+          onEmptyAction={openAdd}
           setDelete={setDeleteModel}
           selectedValues={selectedValues}
           setSelectedValues={setSelectedValues}
