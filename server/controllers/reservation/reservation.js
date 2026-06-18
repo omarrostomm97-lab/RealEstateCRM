@@ -1,6 +1,37 @@
 const Reservation = require("../../model/schema/reservation");
 const AvailabilityBlock = require("../../model/schema/availabilityBlock");
 
+const normalizeEnumValue = (value) => {
+  if (typeof value !== "string") return value;
+  return value.trim().toLowerCase().replace(/-/g, "_").replace(/\s+/g, "_");
+};
+
+const normalizeReservationPayload = (body = {}) => {
+  const payload = { ...body };
+
+  if (payload.status) {
+    payload.status = normalizeEnumValue(payload.status);
+  }
+
+  if (payload.paymentStatus) {
+    payload.paymentStatus = normalizeEnumValue(payload.paymentStatus);
+  }
+
+  if (payload.unit?._id) {
+    payload.unit = payload.unit._id;
+  }
+
+  if (payload.guest?._id) {
+    payload.guest = payload.guest._id;
+  }
+
+  if (payload.owner?._id) {
+    payload.owner = payload.owner._id;
+  }
+
+  return payload;
+};
+
 const calculateNights = (checkInDate, checkOutDate) => {
   const start = new Date(checkInDate);
   const end = new Date(checkOutDate);
@@ -26,7 +57,7 @@ const validateReservationDates = (body) => {
 
 const setComputedFields = (body) => {
   if (body.checkInDate && body.checkOutDate) {
-    body.nights = body.nights || calculateNights(body.checkInDate, body.checkOutDate);
+    body.nights = calculateNights(body.checkInDate, body.checkOutDate);
   }
 
   const totalAmount = Number(body.totalAmount || 0);
@@ -48,7 +79,8 @@ const setComputedFields = (body) => {
 };
 
 const checkConfirmedOverlap = async (body, excludeReservationId) => {
-  if (body.status !== "confirmed") return null;
+  const status = normalizeEnumValue(body.status);
+  if (status !== "confirmed") return null;
 
   return Reservation.findConfirmedOverlap({
     unit: body.unit,
@@ -73,10 +105,11 @@ const index = async (req, res) => {
 
 const add = async (req, res) => {
   try {
-    const dateError = validateReservationDates(req.body);
+    const normalizedBody = normalizeReservationPayload(req.body);
+    const dateError = validateReservationDates(normalizedBody);
     if (dateError) return res.status(400).json({ message: dateError });
 
-    const payload = setComputedFields({ ...req.body, createdDate: new Date() });
+    const payload = setComputedFields({ ...normalizedBody, createdDate: new Date() });
     const overlap = await checkConfirmedOverlap(payload);
     if (overlap) {
       return res.status(409).json({
@@ -110,10 +143,11 @@ const edit = async (req, res) => {
   try {
     const existing = await Reservation.findOne({ _id: req.params.id, deleted: false });
     if (!existing) return res.status(404).json({ message: "no Data Found." });
+    const normalizedBody = normalizeReservationPayload(req.body);
 
     const mergedReservation = {
       ...existing.toObject(),
-      ...req.body,
+      ...normalizedBody,
       updatedDate: new Date(),
     };
 
@@ -131,7 +165,7 @@ const edit = async (req, res) => {
     }
 
     const updateData = {
-      ...req.body,
+      ...normalizedBody,
       nights: mergedReservation.nights,
       balanceDue: mergedReservation.balanceDue,
       paymentStatus: mergedReservation.paymentStatus,
@@ -141,7 +175,7 @@ const edit = async (req, res) => {
     const result = await Reservation.findOneAndUpdate(
       { _id: req.params.id, deleted: false },
       { $set: updateData },
-      { new: true }
+      { new: true, runValidators: true }
     );
     res.status(200).json(result);
   } catch (err) {

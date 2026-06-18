@@ -63,6 +63,8 @@ const Reservation = new mongoose.Schema({
     type: String,
     enum: reservationStatuses,
     default: "inquiry",
+    lowercase: true,
+    trim: true,
   },
   subtotal: {
     type: Number,
@@ -100,6 +102,8 @@ const Reservation = new mongoose.Schema({
     type: String,
     enum: paymentStatuses,
     default: "unpaid",
+    lowercase: true,
+    trim: true,
   },
   depositDueDate: Date,
   cancellationReason: String,
@@ -134,6 +138,8 @@ Reservation.statics.findConfirmedOverlap = function ({
   checkOutDate,
   excludeReservationId,
 }) {
+  if (!unit || !checkInDate || !checkOutDate) return null;
+
   const query = {
     unit,
     deleted: false,
