@@ -2,6 +2,7 @@ import { CloseIcon } from "@chakra-ui/icons";
 import {
   Alert,
   AlertIcon,
+  Badge,
   Box,
   Button,
   Divider,
@@ -11,8 +12,10 @@ import {
   DrawerFooter,
   DrawerHeader,
   DrawerOverlay,
+  FormHelperText,
   FormLabel,
   Heading,
+  HStack,
   IconButton,
   Input,
   Select,
@@ -54,22 +57,51 @@ const validationSchema = yup.object({
     .min(0, "Commission value cannot be negative"),
 });
 
+const getFriendlyError = (error, fallback) => {
+  const message =
+    error?.response?.data?.message ||
+    error?.response?.data?.error ||
+    error?.message ||
+    fallback;
+
+  if (
+    message?.toLowerCase()?.includes("network") ||
+    message?.toLowerCase()?.includes("request failed") ||
+    message?.toLowerCase()?.includes("500")
+  ) {
+    return fallback;
+  }
+
+  return message;
+};
+
 const Section = ({ title, description, children }) => {
   const borderColor = useColorModeValue("gray.200", "whiteAlpha.100");
+  const sectionBg = useColorModeValue("white", "gray.800");
+  const accentBg = useColorModeValue("brand.50", "whiteAlpha.100");
   const subtleText = useColorModeValue("secondaryGray.600", "gray.400");
 
   return (
-    <Box border="1px solid" borderColor={borderColor} borderRadius="12px" p={4}>
-      <Box mb={4}>
-        <Heading size="sm" color="secondaryGray.900" mb={1}>
-          {title}
-        </Heading>
-        {description && (
-          <Text color={subtleText} fontSize="sm">
-            {description}
-          </Text>
-        )}
-      </Box>
+    <Box
+      bg={sectionBg}
+      border="1px solid"
+      borderColor={borderColor}
+      borderRadius="16px"
+      p={{ base: 4, md: 5 }}
+    >
+      <HStack align="flex-start" spacing={3} mb={4}>
+        <Box bg={accentBg} borderRadius="999px" h="10px" mt="7px" w="10px" flexShrink={0} />
+        <Box>
+          <Heading size="sm" color="secondaryGray.900" mb={1}>
+            {title}
+          </Heading>
+          {description && (
+            <Text color={subtleText} fontSize="sm" lineHeight="1.5">
+              {description}
+            </Text>
+          )}
+        </Box>
+      </HStack>
       {children}
     </Box>
   );
@@ -86,8 +118,13 @@ const OwnerForm = (props) => {
   const [isLoding, setIsLoding] = useState(false);
   const [error, setError] = useState("");
   const subtleText = useColorModeValue("secondaryGray.600", "gray.400");
+  const drawerBg = useColorModeValue("gray.50", "gray.900");
+  const headerBg = useColorModeValue("white", "gray.800");
+  const footerBg = useColorModeValue("white", "gray.800");
+  const fieldBg = useColorModeValue("white", "whiteAlpha.50");
   const footerBorder = useColorModeValue("gray.200", "whiteAlpha.100");
   const userId = JSON.parse(localStorage.getItem("user"))?._id;
+  const isEditMode = mode === "edit";
 
   const formik = useFormik({
     initialValues: initialOwnerValues,
@@ -129,10 +166,20 @@ const OwnerForm = (props) => {
           commissionValue: response?.data?.commissionValue || 0,
         });
       } else {
-        setError(response?.response?.data?.message || "Failed to load owner.");
+        const message = getFriendlyError(
+          response,
+          "We could not load this owner profile. Please try again."
+        );
+        setError(message);
+        toast.error(message);
       }
     } catch (e) {
-      setError(e?.message || "Failed to load owner.");
+      const message = getFriendlyError(
+        e,
+        "We could not load this owner profile. Please try again."
+      );
+      setError(message);
+      toast.error(message);
     } finally {
       setIsLoding(false);
     }
@@ -154,18 +201,21 @@ const OwnerForm = (props) => {
           : await postApi("api/owner/add", { ...payload, createBy: userId });
 
       if (response?.status === 200) {
-        onSaved();
+        onSaved(mode);
         closeForm();
       } else {
-        const message =
-          response?.response?.data?.message ||
-            response?.response?.data?.error ||
-            "Failed to save owner.";
+        const message = getFriendlyError(
+          response,
+          "We could not save this owner profile. Please check the details and try again."
+        );
         setError(message);
         toast.error(message);
       }
     } catch (e) {
-      const message = e?.message || "Failed to save owner.";
+      const message = getFriendlyError(
+        e,
+        "We could not save this owner profile. Please check the details and try again."
+      );
       setError(message);
       toast.error(message);
     } finally {
@@ -187,15 +237,27 @@ const OwnerForm = (props) => {
   return (
     <Drawer isOpen={isOpen} size="xl" onClose={closeForm}>
       <DrawerOverlay />
-      <DrawerContent>
-        <DrawerHeader>
+      <DrawerContent bg={drawerBg}>
+        <DrawerHeader
+          bg={headerBg}
+          borderBottom="1px solid"
+          borderColor={footerBorder}
+          pb={5}
+        >
           <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={4}>
             <Box>
-              <Heading size="md" color="secondaryGray.900">
-                {mode === "edit" ? "Edit Owner" : "Add Owner"}
-              </Heading>
+              <HStack spacing={3} align="center" mb={1}>
+                <Heading size="md" color="secondaryGray.900">
+                  {isEditMode ? "Edit Owner" : "Add Owner"}
+                </Heading>
+                <Badge colorScheme={isEditMode ? "blue" : "green"} variant="subtle">
+                  {isEditMode ? "Existing Profile" : "New Profile"}
+                </Badge>
+              </HStack>
               <Text color={subtleText} fontSize="sm" mt={1}>
-                Keep contact, payout, and commission details organized.
+                {isEditMode
+                  ? "Review and update owner contact, payout, and commission details."
+                  : "Create a clean owner profile with contact, payout, and commission details."}
               </Text>
             </Box>
             <IconButton
@@ -206,7 +268,7 @@ const OwnerForm = (props) => {
             />
           </Box>
         </DrawerHeader>
-        <DrawerBody pb={6}>
+        <DrawerBody pb={6} pt={5}>
           {error && (
             <Alert status="error" mb={4} borderRadius="8px">
               <AlertIcon />
@@ -217,7 +279,7 @@ const OwnerForm = (props) => {
           {isLoding && mode === "edit" ? (
             <Spinner />
           ) : (
-            <Stack spacing={4}>
+            <Stack spacing={5}>
               <Section
                 title="Basic Information"
                 description="Identify the owner record and official reference details."
@@ -236,7 +298,11 @@ const OwnerForm = (props) => {
                       borderColor={
                         errors?.name && touched?.name ? "red.300" : null
                       }
+                      bg={fieldBg}
                     />
+                    <FormHelperText color={subtleText} fontSize="xs">
+                      Use the legal or business name your team recognizes.
+                    </FormHelperText>
                     <FieldError>
                       {errors?.name && touched?.name && errors?.name}
                     </FieldError>
@@ -252,7 +318,11 @@ const OwnerForm = (props) => {
                       onChange={handleChange}
                       onBlur={handleBlur}
                       placeholder="National ID or tax reference"
+                      bg={fieldBg}
                     />
+                    <FormHelperText color={subtleText} fontSize="xs">
+                      Optional reference for internal verification.
+                    </FormHelperText>
                   </Box>
                 </SimpleGrid>
               </Section>
@@ -272,6 +342,7 @@ const OwnerForm = (props) => {
                       onChange={handleChange}
                       onBlur={handleBlur}
                       placeholder="Primary phone number"
+                      bg={fieldBg}
                     />
                   </Box>
 
@@ -284,7 +355,8 @@ const OwnerForm = (props) => {
                       value={values?.whatsapp}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      placeholder="WhatsApp number"
+                      placeholder="WhatsApp number, if different"
+                      bg={fieldBg}
                     />
                   </Box>
 
@@ -302,6 +374,7 @@ const OwnerForm = (props) => {
                       borderColor={
                         errors?.email && touched?.email ? "red.300" : null
                       }
+                      bg={fieldBg}
                     />
                     <FieldError>
                       {errors?.email && touched?.email && errors?.email}
@@ -325,6 +398,7 @@ const OwnerForm = (props) => {
                         value={values?.payoutMethod}
                         onChange={handleChange}
                         onBlur={handleBlur}
+                        bg={fieldBg}
                       >
                         <option value="cash">Cash</option>
                         <option value="bank_transfer">Bank Transfer</option>
@@ -342,7 +416,8 @@ const OwnerForm = (props) => {
                         value={values?.payoutSchedule}
                         onChange={handleChange}
                         onBlur={handleBlur}
-                        placeholder="Monthly, after checkout, custom"
+                        placeholder="Monthly, after checkout, or custom"
+                        bg={fieldBg}
                       />
                     </Box>
                   </SimpleGrid>
@@ -360,6 +435,7 @@ const OwnerForm = (props) => {
                         onChange={handleChange}
                         onBlur={handleBlur}
                         placeholder="Bank name"
+                        bg={fieldBg}
                       />
                     </Box>
 
@@ -373,6 +449,7 @@ const OwnerForm = (props) => {
                         onChange={handleChange}
                         onBlur={handleBlur}
                         placeholder="Account holder name"
+                        bg={fieldBg}
                       />
                     </Box>
 
@@ -386,9 +463,13 @@ const OwnerForm = (props) => {
                         onChange={handleChange}
                         onBlur={handleBlur}
                         placeholder="Account number or IBAN"
+                        bg={fieldBg}
                       />
                     </Box>
                   </SimpleGrid>
+                  <Text color={subtleText} fontSize="xs">
+                    Leave bank fields empty when the owner prefers cash, wallet, or another payout method.
+                  </Text>
                 </Stack>
               </Section>
 
@@ -406,6 +487,7 @@ const OwnerForm = (props) => {
                       value={values?.commissionType}
                       onChange={handleChange}
                       onBlur={handleBlur}
+                      bg={fieldBg}
                     >
                       <option value="percentage">Percentage</option>
                       <option value="fixed">Fixed</option>
@@ -423,13 +505,25 @@ const OwnerForm = (props) => {
                       value={values?.commissionValue}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      placeholder="0"
+                      placeholder={
+                        values?.commissionType === "percentage"
+                          ? "Example: 10"
+                          : "Example: 500"
+                      }
                       borderColor={
                         errors?.commissionValue && touched?.commissionValue
                           ? "red.300"
                           : null
                       }
+                      bg="white"
                     />
+                    <FormHelperText color={subtleText} fontSize="xs">
+                      {values?.commissionType === "percentage"
+                        ? "Enter the percentage without the percent symbol."
+                        : values?.commissionType === "fixed"
+                          ? "Enter the fixed amount agreed with the owner."
+                          : "Keep this at 0 when no commission applies."}
+                    </FormHelperText>
                     <FieldError>
                       {errors?.commissionValue &&
                         touched?.commissionValue &&
@@ -447,12 +541,21 @@ const OwnerForm = (props) => {
                   onBlur={handleBlur}
                   placeholder="Internal notes, payout preferences, or special instructions"
                   minH="110px"
+                  bg={fieldBg}
                 />
               </Section>
             </Stack>
           )}
         </DrawerBody>
-        <DrawerFooter borderTop="1px solid" borderColor={footerBorder}>
+        <DrawerFooter
+          bg={footerBg}
+          borderTop="1px solid"
+          borderColor={footerBorder}
+          bottom={0}
+          gap={3}
+          position="sticky"
+          zIndex={1}
+        >
           <Button variant="outline" mr={3} onClick={closeForm}>
             Cancel
           </Button>
@@ -461,7 +564,7 @@ const OwnerForm = (props) => {
             onClick={handleSubmit}
             isDisabled={isLoding}
           >
-            {isLoding ? <Spinner /> : "Save"}
+            {isLoding ? <Spinner /> : isEditMode ? "Save Changes" : "Create Owner"}
           </Button>
         </DrawerFooter>
       </DrawerContent>
