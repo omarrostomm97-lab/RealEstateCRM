@@ -28,6 +28,7 @@ const Owner = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  payoutSchedule: String,
   notes: String,
   createBy: {
     type: mongoose.Schema.Types.ObjectId,
