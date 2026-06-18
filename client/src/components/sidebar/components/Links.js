@@ -39,6 +39,7 @@ export function SidebarLinks(props) {
   // this function creates the links from the secondary accordions (for example auth -> sign-in -> default)
   const createLinks = (routes) => {
     return routes?.map((route, index) => {
+      const routeLabel = route?.sidebarName || route?.name;
       if (route?.category) {
         return (
           <>
@@ -55,7 +56,7 @@ export function SidebarLinks(props) {
               pb="10px"
               key={index}
             >
-              {route?.name}
+              {routeLabel}
             </Text>
             {createLinks(route?.items)}
           </>
@@ -132,8 +133,8 @@ export function SidebarLinks(props) {
                             : "normal"
                         }
                       >
-                        <Tooltip hasArrow label={route?.name}>
-                          {route?.name}
+                        <Tooltip hasArrow label={routeLabel}>
+                          {routeLabel}
                         </Tooltip>
                       </Text>
                     </Flex>
@@ -190,7 +191,7 @@ export function SidebarLinks(props) {
                         : "normal"
                     }
                   >
-                    {route?.name}
+                    {routeLabel}
                   </Text>
                   <Box h="36px" w="4px" bg="brand.400" borderRadius="5px" />
                 </HStack>
